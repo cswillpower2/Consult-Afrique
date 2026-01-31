@@ -3,14 +3,22 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/components/theme-provider";
+import Landing from "@/pages/landing";
+import Dashboard from "@/pages/dashboard/index";
+import Profile from "@/pages/dashboard/profile";
+import Documents from "@/pages/dashboard/documents";
+import Settings from "@/pages/dashboard/settings";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
-      {/* Add pages below */}
-      {/* <Route path="/" component={Home}/> */}
-      {/* Fallback to 404 */}
+      <Route path="/" component={Landing} />
+      <Route path="/dashboard" component={Dashboard} />
+      <Route path="/dashboard/profile" component={Profile} />
+      <Route path="/dashboard/documents" component={Documents} />
+      <Route path="/dashboard/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -19,10 +27,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <ThemeProvider defaultTheme="light" storageKey="consultafrique-theme">
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
