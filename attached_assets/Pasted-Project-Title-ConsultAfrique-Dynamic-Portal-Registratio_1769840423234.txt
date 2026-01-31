@@ -1,0 +1,144 @@
+Project Title: ConsultAfrique Dynamic Portal & Registration System Role: Senior Full-Stack Developer & System Architect
+
+Objective: Build a comprehensive web platform for "ConsultAfrique" (Education & Medical Tourism). The system requires a public marketing frontend, a secure Client Portal (Student/Patient), and an Admin Dashboard.
+
+1. Tech Stack & Architecture
+Framework: Next.js (App Router) with React.
+
+Styling: Tailwind CSS (Responsive, Mobile-First).
+
+Backend/Auth: Supabase, Firebase, or Node.js (Must support Role-Based Access: User vs. Admin).
+
+Transactional Email Service: SendGrid, Mailgun, or Nodemailer (SMTP).
+
+Brand Identity:
+
+Primary: Deep Green (Approx. #2F855A).
+
+Accent: Orange (Approx. #ED8936).
+
+2. Core Functional Flows
+A. Two-Step Registration & Onboarding
+Step 1: Sign Up (Low Friction)
+
+User Action: Select "Student" or "Patient". Enter Email + Password.
+
+System Action: Create account and send Email Verification link.
+
+Step 2: Onboarding (After Email Verified)
+
+Redirect: User is sent to the "Complete Profile" page on the Dashboard.
+
+Required Fields: Full Name, DOB, Gender, Nationality, Address, Phone Number.
+
+Missing Info Alert: If incomplete, show a persistent banner: "Please complete your profile and upload documents to proceed."
+
+B. Dynamic Document Uploads (Dashboard)
+Depending on the user type (Student vs. Patient), the "Documents" tab must request different files.
+
+If STUDENT:
+
+International Passport Copy (Min. 12 months validity) [Mandatory but can be skipped for later]
+
+Academic Certificates (Primary, Junior Secondary, WAEC/NECO Senior Certificate - Original Results) [Mandatory]
+
+Sponsorship Proof (Bank statements & Affidavit of Support)
+
+Medical Certificate (Yellow Fever Vaccination) [Mandatory for Pakistan Visa]
+
+If PATIENT:
+
+International Passport Copy [Mandatory]
+
+Referral Letter (From current physician)
+
+Medical Reports & Diagnostics (Lab reports, Imaging CDs/USBs, MRI/CT scans, Biopsy reports) [Mandatory]
+
+Current Prescriptions & Medication List
+
+Medical History Form (Text fields for: Diagnosis, Symptoms, Past Treatments, Reason for choosing Pakistan)
+
+Emergency Contact & Accompanying Person Passport Copy [Mandatory]
+
+C. Email Sender & Notification Logic
+Configure the SMTP/Mailer to use specific "From" addresses for outgoing client emails and "To" addresses for admin alerts:
+
+1. Registration & Admissions (Students & Patients)
+
+Sender Identity: admission@consultafrique.com
+
+Use Case: Sending "Verify Email", "Welcome to ConsultAfrique", and "Action Required: Complete Profile" emails to users.
+
+Admin Alert: When a new user registers, notify admins at this same address.
+
+2. General Inquiries
+
+Sender Identity: info@consultafrique.com
+
+Use Case: Auto-acknowledgment for Contact Form submissions.
+
+3. Support & Passwords
+
+Sender Identity: support@consultafrique.com
+
+Use Case: Sending "Reset Password" links or Technical Support replies.
+
+4. System Critical/Admin
+
+Recipient Only: admiiins@consultafrique.com
+
+Use Case: Critical system errors or high-level admin notifications.
+
+3. Frontend & UI Requirements
+1. Public Frontend
+Hero Carousel:
+
+Slide 1: Education (Student images) -> CTA: "Apply as Student".
+
+Slide 2: Medical (Hospital images) -> CTA: "Apply as Patient".
+
+Dynamic Team Section (Lightbox):
+
+Grid of Team Members (Photo + Name + Role).
+
+Click Action: Opens a Modal/Lightbox with full biography.
+
+Data: Harees Gurashi, Abiola Moshood Atobatele, Akanbi Abdulmutakeem, Ibrahim Sulaiman.
+
+Communication Actions:
+
+WhatsApp: Floating button triggers chat to +923114888878.
+
+Footer Phone: Display +234 707 911 9101.
+
+2. Client Dashboard
+Progress Bar: 0% to 100% based on profile completion and document uploads.
+
+Status Indicators: "Pending Review", "Verified", "Admission/Visa in Progress".
+
+3. Admin Dashboard
+Secure Route: /admin.
+
+Features:
+
+View all users (Filter by Student/Patient).
+
+Review uploaded documents (View/Download).
+
+Change Application Status (e.g., "Approve", "Reject", "Request Resubmission").
+
+4. Instructions for the Agent
+Setup Auth: Implement the sign-up flow with email verification before profile creation.
+
+Database: Create separate schemas or JSON structures for student_docs and patient_docs to handle the different upload requirements defined above.
+
+Mailer: Configure the backend to dynamically switch the "From" address based on the action type (Admission vs. Support vs. Info).
+
+Security: Ensure uploaded documents are stored securely (e.g., S3 or Supabase Storage with RLS) and are only accessible by the owner and the admin.
+
+
+
+OUR SOCIAL MEDIA HANDLES
+https://www.linkedin.com/company/consultafrique/
+https://www.instagram.com/consult_afrique/?igsh=aGw5Y3VueWQzNnJi
+https://www.facebook.com/people/ConsultAfrique/61585775796347/?ref=waios.fb_links_xma_control
