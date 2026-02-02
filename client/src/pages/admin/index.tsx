@@ -149,8 +149,13 @@ export default function AdminDashboard() {
   }
 
   if (!user) {
-    setLocation("/api/login");
-    return null;
+    window.location.href = "/api/login";
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Redirecting to login...</span>
+      </div>
+    );
   }
 
   const pendingCount = profiles.filter(p => p.applicationStatus === "pending").length;
