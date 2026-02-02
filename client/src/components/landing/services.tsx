@@ -1,5 +1,7 @@
-import { GraduationCap, Stethoscope, Plane, FileCheck, Users, Globe } from "lucide-react";
+import { Link } from "wouter";
+import { GraduationCap, Stethoscope, Plane, FileCheck, Users, Globe, Calculator } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 const services = [
   {
@@ -85,6 +87,28 @@ export function Services() {
             </Card>
           ))}
         </div>
+
+        <Card className="mt-12 border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5" data-testid="card-eligibility-cta">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-6 md:p-8">
+            <div className="flex items-center gap-4">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary">
+                <Calculator className="w-8 h-8" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold mb-1">Check Your Eligibility</h3>
+                <p className="text-muted-foreground">
+                  Instantly find out if your WAEC/NECO results meet Pakistani admission standards
+                </p>
+              </div>
+            </div>
+            <Link href="/eligibility-calculator">
+              <Button size="lg" className="whitespace-nowrap" data-testid="button-eligibility-calculator">
+                <Calculator className="mr-2 h-5 w-5" />
+                Use Free Calculator
+              </Button>
+            </Link>
+          </div>
+        </Card>
       </div>
     </section>
   );

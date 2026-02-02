@@ -11,6 +11,7 @@ const navLinks = [
   { href: "#about", label: "About Us" },
   { href: "#team", label: "Our Team" },
   { href: "#contact", label: "Contact" },
+  { href: "/eligibility-calculator", label: "Calculator", isRoute: true },
 ];
 
 export function Navbar() {
@@ -50,16 +51,27 @@ export function Navbar() {
           </Link>
 
           <div className="hidden lg:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <button
-                key={link.href}
-                onClick={() => scrollToSection(link.href)}
-                className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
-                data-testid={`link-nav-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
-              >
-                {link.label}
-              </button>
-            ))}
+            {navLinks.map((link) =>
+              link.isRoute ? (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
+                  data-testid={`link-nav-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
+                >
+                  {link.label}
+                </Link>
+              ) : (
+                <button
+                  key={link.href}
+                  onClick={() => scrollToSection(link.href)}
+                  className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
+                  data-testid={`link-nav-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
+                >
+                  {link.label}
+                </button>
+              )
+            )}
           </div>
 
           <div className="hidden lg:flex items-center gap-3">
@@ -96,16 +108,28 @@ export function Navbar() {
         {isOpen && (
           <div className="lg:hidden py-4 border-t bg-background/95 backdrop-blur-md">
             <div className="flex flex-col gap-2">
-              {navLinks.map((link) => (
-                <button
-                  key={link.href}
-                  onClick={() => scrollToSection(link.href)}
-                  className="py-2 px-4 text-sm font-medium text-foreground/80 hover:text-primary hover:bg-muted rounded-md transition-colors text-left"
-                  data-testid={`link-mobile-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
-                >
-                  {link.label}
-                </button>
-              ))}
+              {navLinks.map((link) =>
+                link.isRoute ? (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="py-2 px-4 text-sm font-medium text-foreground/80 hover:text-primary hover:bg-muted rounded-md transition-colors text-left"
+                    data-testid={`link-mobile-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                ) : (
+                  <button
+                    key={link.href}
+                    onClick={() => scrollToSection(link.href)}
+                    className="py-2 px-4 text-sm font-medium text-foreground/80 hover:text-primary hover:bg-muted rounded-md transition-colors text-left"
+                    data-testid={`link-mobile-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
+                  >
+                    {link.label}
+                  </button>
+                )
+              )}
               <div className="pt-4 px-4 border-t mt-2 flex flex-col gap-2">
                 {user ? (
                   <Button onClick={() => setLocation("/dashboard")} className="w-full" data-testid="button-mobile-dashboard">
