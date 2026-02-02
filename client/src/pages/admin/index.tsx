@@ -93,6 +93,14 @@ export default function AdminDashboard() {
   const [documentsDialogOpen, setDocumentsDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
+  // Check if user is admin
+  const { data: adminCheck, isLoading: adminCheckLoading } = useQuery<{ isAdmin: boolean }>({
+    queryKey: ["/api/admin/check"],
+    enabled: !!user,
+  });
+
+  const isAdmin = adminCheck?.isAdmin ?? false;
+
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
@@ -102,12 +110,12 @@ export default function AdminDashboard() {
 
   const { data: profiles = [], isLoading: profilesLoading, refetch: refetchProfiles } = useQuery<UserProfile[]>({
     queryKey: ["/api/admin/profiles"],
-    enabled: !!user,
+    enabled: !!user && isAdmin,
   });
 
   const { data: inquiries = [], isLoading: inquiriesLoading, refetch: refetchInquiries } = useQuery<ContactInquiry[]>({
     queryKey: ["/api/admin/inquiries"],
-    enabled: !!user,
+    enabled: !!user && isAdmin,
   });
 
   const { data: userDocuments = [], isLoading: documentsLoading } = useQuery<Document[]>({
@@ -146,7 +154,7 @@ export default function AdminDashboard() {
     },
   });
 
-  if (authLoading) {
+  if (authLoading || adminCheckLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <RefreshCw className="h-8 w-8 animate-spin text-primary" />
@@ -159,6 +167,32 @@ export default function AdminDashboard() {
       <div className="min-h-screen flex items-center justify-center">
         <RefreshCw className="h-8 w-8 animate-spin text-primary" />
         <span className="ml-2">Redirecting to login...</span>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="max-w-md mx-4">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 p-4 rounded-full bg-destructive/10">
+              <AlertCircle className="h-8 w-8 text-destructive" />
+            </div>
+            <CardTitle>Access Denied</CardTitle>
+            <CardDescription>
+              You don't have permission to access the admin dashboard.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center gap-3">
+            <Link href="/dashboard">
+              <Button variant="outline">Go to Dashboard</Button>
+            </Link>
+            <Link href="/">
+              <Button>Back to Home</Button>
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     );
   }

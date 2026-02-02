@@ -39,13 +39,14 @@ import {
 import type { UserProfile } from "@shared/schema";
 import logoImg from "@assets/LOGO_1769841000681.jpeg";
 
-const menuItems = [
+const baseMenuItems = [
   { icon: LayoutDashboard, label: "Overview", path: "/dashboard" },
   { icon: User, label: "My Profile", path: "/dashboard/profile" },
   { icon: FileText, label: "Documents", path: "/dashboard/documents" },
   { icon: Settings, label: "Settings", path: "/dashboard/settings" },
-  { icon: Shield, label: "Admin Panel", path: "/admin" },
 ];
+
+const adminMenuItem = { icon: Shield, label: "Admin Panel", path: "/admin" };
 
 function calculateProgress(profile: UserProfile | null): number {
   if (!profile) return 10;
@@ -84,6 +85,14 @@ export default function Dashboard() {
     queryKey: ["/api/profile"],
     enabled: !!user,
   });
+
+  const { data: adminCheck } = useQuery<{ isAdmin: boolean }>({
+    queryKey: ["/api/admin/check"],
+    enabled: !!user,
+  });
+
+  const isAdmin = adminCheck?.isAdmin ?? false;
+  const menuItems = isAdmin ? [...baseMenuItems, adminMenuItem] : baseMenuItems;
 
   useEffect(() => {
     if (!authLoading && !user) {

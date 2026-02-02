@@ -1,4 +1,4 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { isAuthenticated } from "./replit_integrations/auth";
@@ -6,6 +6,18 @@ import { insertContactInquirySchema, updateUserProfileSchema } from "@shared/sch
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+
+// Admin emails - add admin user emails here
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+
+// Middleware to check if user is admin
+const isAdmin = (req: any, res: Response, next: NextFunction) => {
+  const userEmail = req.user?.claims?.email?.toLowerCase();
+  if (!userEmail || !ADMIN_EMAILS.includes(userEmail)) {
+    return res.status(403).json({ message: "Access denied. Admin privileges required." });
+  }
+  next();
+};
 
 const uploadDir = "./uploads";
 if (!fs.existsSync(uploadDir)) {
@@ -147,7 +159,14 @@ export async function registerRoutes(
     res.sendFile(path.resolve(filePath));
   });
 
-  app.get("/api/admin/profiles", isAuthenticated, async (req: any, res) => {
+  // Check if current user is admin
+  app.get("/api/admin/check", isAuthenticated, async (req: any, res) => {
+    const userEmail = req.user?.claims?.email?.toLowerCase();
+    const isAdminUser = userEmail && ADMIN_EMAILS.includes(userEmail);
+    res.json({ isAdmin: isAdminUser });
+  });
+
+  app.get("/api/admin/profiles", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const profiles = await storage.getAllProfiles();
       res.json(profiles);
@@ -157,7 +176,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/admin/profiles/:id/status", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/admin/profiles/:id/status", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const { status } = req.body;
       const validStatuses = ["pending", "in_review", "approved", "rejected", "resubmission_required"];
@@ -178,7 +197,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/admin/documents", isAuthenticated, async (req: any, res) => {
+  app.get("/api/admin/documents", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const userId = req.query.userId as string;
       if (userId) {
@@ -193,7 +212,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/admin/documents/:id/status", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/admin/documents/:id/status", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const { status } = req.body;
       const validStatuses = ["pending", "verified", "rejected"];
@@ -214,7 +233,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/admin/inquiries", isAuthenticated, async (req: any, res) => {
+  app.get("/api/admin/inquiries", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const inquiries = await storage.getContactInquiries();
       res.json(inquiries);
