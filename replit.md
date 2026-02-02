@@ -4,6 +4,13 @@
 ConsultAfrique is a comprehensive web platform connecting African students and patients with educational institutions and healthcare facilities in Pakistan. The platform provides a public marketing frontend, secure client portal, and admin dashboard for managing applications.
 
 ## Recent Changes
+- **February 2, 2026**: Added WAEC/NECO Eligibility Calculator
+  - Calculator for Nigerian students to check admission eligibility
+  - Grade-to-marks conversion based on IBCC 2026 standards
+  - Course-specific subject validation (Medicine, Engineering, Computer Science)
+  - Equivalence scaling with 10% IBCC deduction
+  - Navigation links in navbar and services section
+
 - **January 31, 2026**: Initial MVP implementation
   - Landing page with hero carousel, services, team section, and contact form
   - User authentication via Replit Auth
