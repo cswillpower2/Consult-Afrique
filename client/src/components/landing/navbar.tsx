@@ -47,7 +47,11 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20">
           <Link href="/" className="flex items-center gap-2" data-testid="link-home-logo">
-            <img src={logoImg} alt="ConsultAfrique" className="h-10 lg:h-12 w-auto" />
+            <img 
+              src={logoImg} 
+              alt="ConsultAfrique" 
+              className="h-12 lg:h-16 w-auto rounded-md shadow-sm" 
+            />
           </Link>
 
           <div className="hidden lg:flex items-center gap-8">
@@ -56,7 +60,11 @@ export function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
+                  className={`text-sm font-semibold transition-colors ${
+                    isScrolled
+                      ? "text-foreground/80 hover:text-primary"
+                      : "text-white hover:text-white/80 drop-shadow-md"
+                  }`}
                   data-testid={`link-nav-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
                 >
                   {link.label}
@@ -65,7 +73,11 @@ export function Navbar() {
                 <button
                   key={link.href}
                   onClick={() => scrollToSection(link.href)}
-                  className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
+                  className={`text-sm font-semibold transition-colors ${
+                    isScrolled
+                      ? "text-foreground/80 hover:text-primary"
+                      : "text-white hover:text-white/80 drop-shadow-md"
+                  }`}
                   data-testid={`link-nav-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
                 >
                   {link.label}
@@ -77,15 +89,28 @@ export function Navbar() {
           <div className="hidden lg:flex items-center gap-3">
             <ThemeToggle />
             {isLoading ? null : user ? (
-              <Button onClick={() => setLocation("/dashboard")} data-testid="button-dashboard">
+              <Button 
+                onClick={() => setLocation("/dashboard")} 
+                className={isScrolled ? "" : "bg-primary text-white shadow-lg"}
+                data-testid="button-dashboard"
+              >
                 Dashboard
               </Button>
             ) : (
               <>
-                <Button variant="ghost" asChild data-testid="button-login">
+                <Button 
+                  variant="ghost" 
+                  asChild 
+                  className={isScrolled ? "" : "text-white border-white/40 border hover:bg-white/20"}
+                  data-testid="button-login"
+                >
                   <a href="/api/login">Log In</a>
                 </Button>
-                <Button asChild data-testid="button-apply">
+                <Button 
+                  asChild 
+                  className={isScrolled ? "" : "bg-accent text-white shadow-lg hover:bg-accent/90"}
+                  data-testid="button-apply"
+                >
                   <a href="/api/login">Apply Now</a>
                 </Button>
               </>
