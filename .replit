@@ -44,4 +44,4 @@ integrations = ["javascript_log_in_with_replit:2.0.0", "javascript_database:1.0.
 [userenv]
 
 [userenv.shared]
-ADMIN_EMAILS = "admiiins@consultafrique.com,ibrahim@consultafrique.com,abiola@consultafrique.com"
+ADMIN_EMAILS = "admiiins@consultafrique.com,ibrahim@consultafrique.com,abiola@consultafrique.com,cosultafrique@gmail.com"

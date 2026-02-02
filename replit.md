@@ -11,7 +11,7 @@ ConsultAfrique is a comprehensive web platform connecting African students and p
   - View contact form inquiries
   - Access via /admin route or "Admin Panel" in user dashboard sidebar
   - Role-based access control: Only users with emails in ADMIN_EMAILS env var can access
-  - Admin emails: admiiins@consultafrique.com, ibrahim@consultafrique.com, abiola@consultafrique.com
+  - Admin emails: admiiins@consultafrique.com, ibrahim@consultafrique.com, abiola@consultafrique.com, cosultafrique@gmail.com
 
 - **February 2, 2026**: Added WAEC/NECO Eligibility Calculator
   - Calculator for Nigerian students to check admission eligibility
