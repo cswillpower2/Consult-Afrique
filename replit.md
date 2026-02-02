@@ -10,6 +10,8 @@ ConsultAfrique is a comprehensive web platform connecting African students and p
   - View and verify uploaded documents for each user
   - View contact form inquiries
   - Access via /admin route or "Admin Panel" in user dashboard sidebar
+  - Requires authentication (login required to access admin features)
+  - Note: Role-based admin authorization is a future enhancement
 
 - **February 2, 2026**: Added WAEC/NECO Eligibility Calculator
   - Calculator for Nigerian students to check admission eligibility

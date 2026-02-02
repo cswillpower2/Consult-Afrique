@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { useState, useEffect } from "react";
+import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -88,11 +88,17 @@ const docStatusColors: Record<DocumentStatus, string> = {
 
 export default function AdminDashboard() {
   const { user, isLoading: authLoading } = useAuth();
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
   const [documentsDialogOpen, setDocumentsDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      window.location.href = "/api/login";
+    }
+  }, [authLoading, user]);
 
   const { data: profiles = [], isLoading: profilesLoading, refetch: refetchProfiles } = useQuery<UserProfile[]>({
     queryKey: ["/api/admin/profiles"],
@@ -149,7 +155,6 @@ export default function AdminDashboard() {
   }
 
   if (!user) {
-    window.location.href = "/api/login";
     return (
       <div className="min-h-screen flex items-center justify-center">
         <RefreshCw className="h-8 w-8 animate-spin text-primary" />
