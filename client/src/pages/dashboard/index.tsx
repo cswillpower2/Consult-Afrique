@@ -34,6 +34,7 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
+  Shield,
 } from "lucide-react";
 import type { UserProfile } from "@shared/schema";
 import logoImg from "@assets/LOGO_1769841000681.jpeg";
@@ -43,6 +44,7 @@ const menuItems = [
   { icon: User, label: "My Profile", path: "/dashboard/profile" },
   { icon: FileText, label: "Documents", path: "/dashboard/documents" },
   { icon: Settings, label: "Settings", path: "/dashboard/settings" },
+  { icon: Shield, label: "Admin Panel", path: "/admin" },
 ];
 
 function calculateProgress(profile: UserProfile | null): number {
