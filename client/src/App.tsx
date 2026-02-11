@@ -6,6 +6,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import Landing from "@/pages/landing";
 import EligibilityCalculator from "@/pages/eligibility-calculator";
+import Login from "@/pages/auth/login";
+import Register from "@/pages/auth/register";
+import ForgotPassword from "@/pages/auth/forgot-password";
+import ResetPassword from "@/pages/auth/reset-password";
 import Dashboard from "@/pages/dashboard/index";
 import Profile from "@/pages/dashboard/profile";
 import Documents from "@/pages/dashboard/documents";
@@ -18,6 +22,10 @@ function Router() {
     <Switch>
       <Route path="/" component={Landing} />
       <Route path="/eligibility-calculator" component={EligibilityCalculator} />
+      <Route path="/login" component={Login} />
+      <Route path="/register" component={Register} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/dashboard/profile" component={Profile} />
       <Route path="/dashboard/documents" component={Documents} />

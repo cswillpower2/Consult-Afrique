@@ -104,14 +104,14 @@ export function Navbar() {
                   className={isScrolled ? "" : "text-white border-white/40 border hover:bg-white/20"}
                   data-testid="button-login"
                 >
-                  <a href="/api/login">Log In</a>
+                  <Link href="/login">Log In</Link>
                 </Button>
                 <Button 
                   asChild 
                   className={isScrolled ? "" : "bg-accent text-white shadow-lg hover:bg-accent/90"}
                   data-testid="button-apply"
                 >
-                  <a href="/api/login">Apply Now</a>
+                  <Link href="/register">Apply Now</Link>
                 </Button>
               </>
             )}
@@ -163,10 +163,10 @@ export function Navbar() {
                 ) : (
                   <>
                     <Button variant="outline" asChild className="w-full" data-testid="button-mobile-login">
-                      <a href="/api/login">Log In</a>
+                      <Link href="/login">Log In</Link>
                     </Button>
                     <Button asChild className="w-full" data-testid="button-mobile-apply">
-                      <a href="/api/login">Get Started</a>
+                      <Link href="/register">Get Started</Link>
                     </Button>
                   </>
                 )}

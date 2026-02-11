@@ -46,7 +46,7 @@ export default function Settings() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      window.location.href = "/api/login";
+      window.location.href = "/login";
     }
   }, [user, authLoading]);
 

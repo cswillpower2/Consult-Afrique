@@ -7,7 +7,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
   Users, FileText, Mail, ArrowLeft, CheckCircle, XCircle, 
   Clock, Eye, RefreshCw, ChevronDown, User, Phone, Calendar,
-  FileCheck, AlertCircle
+  FileCheck, AlertCircle, Newspaper, Plus, Pencil, Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +35,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import logoImg from "@assets/LOGO_1769841000681.jpeg";
 
 type ApplicationStatus = "pending" | "in_review" | "approved" | "rejected" | "resubmission_required";
@@ -72,6 +76,19 @@ interface ContactInquiry {
   createdAt: string;
 }
 
+interface NewsArticle {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  imageUrl: string | null;
+  isPublished: boolean;
+  publishedAt: string | null;
+  authorId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 const statusColors: Record<ApplicationStatus, string> = {
   pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
   in_review: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
@@ -92,6 +109,9 @@ export default function AdminDashboard() {
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
   const [documentsDialogOpen, setDocumentsDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [newsDialogOpen, setNewsDialogOpen] = useState(false);
+  const [editingArticle, setEditingArticle] = useState<NewsArticle | null>(null);
+  const [newsForm, setNewsForm] = useState({ title: "", summary: "", content: "", imageUrl: "", isPublished: false });
 
   // Check if user is admin
   const { data: adminCheck, isLoading: adminCheckLoading } = useQuery<{ isAdmin: boolean }>({
@@ -104,7 +124,7 @@ export default function AdminDashboard() {
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
-      window.location.href = "/api/login";
+      window.location.href = "/login";
     }
   }, [authLoading, user]);
 
@@ -127,6 +147,98 @@ export default function AdminDashboard() {
     },
     enabled: !!selectedUserId,
   });
+
+  const { data: newsArticles = [], isLoading: newsLoading, refetch: refetchNews } = useQuery<NewsArticle[]>({
+    queryKey: ["/api/admin/news"],
+    enabled: !!user && isAdmin,
+  });
+
+  const createNewsMutation = useMutation({
+    mutationFn: async (data: typeof newsForm) => {
+      return apiRequest("POST", "/api/admin/news", {
+        ...data,
+        publishedAt: data.isPublished ? new Date().toISOString() : null,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/news"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/news"] });
+      setNewsDialogOpen(false);
+      resetNewsForm();
+      toast({ title: "Article created successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to create article", variant: "destructive" });
+    },
+  });
+
+  const updateNewsMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: typeof newsForm }) => {
+      return apiRequest("PATCH", `/api/admin/news/${id}`, {
+        ...data,
+        publishedAt: data.isPublished ? new Date().toISOString() : null,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/news"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/news"] });
+      setNewsDialogOpen(false);
+      setEditingArticle(null);
+      resetNewsForm();
+      toast({ title: "Article updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update article", variant: "destructive" });
+    },
+  });
+
+  const deleteNewsMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/admin/news/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/news"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/news"] });
+      toast({ title: "Article deleted" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete article", variant: "destructive" });
+    },
+  });
+
+  const resetNewsForm = () => {
+    setNewsForm({ title: "", summary: "", content: "", imageUrl: "", isPublished: false });
+  };
+
+  const openNewArticle = () => {
+    setEditingArticle(null);
+    resetNewsForm();
+    setNewsDialogOpen(true);
+  };
+
+  const openEditArticle = (article: NewsArticle) => {
+    setEditingArticle(article);
+    setNewsForm({
+      title: article.title,
+      summary: article.summary,
+      content: article.content,
+      imageUrl: article.imageUrl || "",
+      isPublished: article.isPublished,
+    });
+    setNewsDialogOpen(true);
+  };
+
+  const handleNewsSubmit = () => {
+    if (!newsForm.title || !newsForm.summary || !newsForm.content) {
+      toast({ title: "Please fill in all required fields", variant: "destructive" });
+      return;
+    }
+    if (editingArticle) {
+      updateNewsMutation.mutate({ id: editingArticle.id, data: newsForm });
+    } else {
+      createNewsMutation.mutate(newsForm);
+    }
+  };
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: ApplicationStatus }) => {
@@ -289,6 +401,10 @@ export default function AdminDashboard() {
               <Mail className="mr-2 h-4 w-4" />
               Inquiries ({inquiries.length})
             </TabsTrigger>
+            <TabsTrigger value="news" data-testid="tab-news">
+              <Newspaper className="mr-2 h-4 w-4" />
+              News ({newsArticles.length})
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="applications">
@@ -449,8 +565,180 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           </TabsContent>
+          <TabsContent value="news">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between gap-3">
+                <div>
+                  <CardTitle>News & Updates</CardTitle>
+                  <CardDescription>Manage articles displayed on the landing page</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => refetchNews()} data-testid="button-refresh-news">
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Refresh
+                  </Button>
+                  <Button size="sm" onClick={openNewArticle} data-testid="button-create-news">
+                    <Plus className="mr-2 h-4 w-4" />
+                    New Article
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {newsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : newsArticles.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Newspaper className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                    <p>No articles yet</p>
+                    <Button variant="outline" className="mt-4" onClick={openNewArticle}>
+                      Create your first article
+                    </Button>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {newsArticles.map((article) => (
+                        <TableRow key={article.id} data-testid={`row-news-${article.id}`}>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">{article.title}</div>
+                              <div className="text-sm text-muted-foreground line-clamp-1">{article.summary}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={article.isPublished ? "default" : "outline"}>
+                              {article.isPublished ? "Published" : "Draft"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {new Date(article.createdAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openEditArticle(article)}
+                                data-testid={`button-edit-news-${article.id}`}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  if (confirm("Are you sure you want to delete this article?")) {
+                                    deleteNewsMutation.mutate(article.id);
+                                  }
+                                }}
+                                data-testid={`button-delete-news-${article.id}`}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </main>
+
+      <Dialog open={newsDialogOpen} onOpenChange={setNewsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Newspaper className="h-5 w-5" />
+              {editingArticle ? "Edit Article" : "New Article"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingArticle ? "Update the article details below" : "Create a new news article"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="news-title">Title *</Label>
+              <Input
+                id="news-title"
+                value={newsForm.title}
+                onChange={(e) => setNewsForm(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Article title"
+                data-testid="input-news-title"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="news-summary">Summary *</Label>
+              <Textarea
+                id="news-summary"
+                value={newsForm.summary}
+                onChange={(e) => setNewsForm(prev => ({ ...prev, summary: e.target.value }))}
+                placeholder="Brief summary shown on the landing page"
+                rows={2}
+                data-testid="input-news-summary"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="news-content">Content *</Label>
+              <Textarea
+                id="news-content"
+                value={newsForm.content}
+                onChange={(e) => setNewsForm(prev => ({ ...prev, content: e.target.value }))}
+                placeholder="Full article content"
+                rows={8}
+                data-testid="input-news-content"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="news-image">Image URL (optional)</Label>
+              <Input
+                id="news-image"
+                value={newsForm.imageUrl}
+                onChange={(e) => setNewsForm(prev => ({ ...prev, imageUrl: e.target.value }))}
+                placeholder="https://example.com/image.jpg"
+                data-testid="input-news-image"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch
+                id="news-published"
+                checked={newsForm.isPublished}
+                onCheckedChange={(checked) => setNewsForm(prev => ({ ...prev, isPublished: checked }))}
+                data-testid="switch-news-published"
+              />
+              <Label htmlFor="news-published">Publish immediately</Label>
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setNewsDialogOpen(false)} data-testid="button-cancel-news">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleNewsSubmit}
+                disabled={createNewsMutation.isPending || updateNewsMutation.isPending}
+                data-testid="button-save-news"
+              >
+                {(createNewsMutation.isPending || updateNewsMutation.isPending) && (
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                {editingArticle ? "Update" : "Create"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={documentsDialogOpen} onOpenChange={setDocumentsDialogOpen}>
         <DialogContent className="max-w-2xl">

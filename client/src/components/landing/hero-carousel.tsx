@@ -195,7 +195,7 @@ export function HeroCarousel() {
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 pt-4">
             <a
-              href="/api/login"
+              href="/register"
               className="flex flex-col items-center gap-3 p-6 rounded-lg border-2 border-border hover:border-primary hover:bg-primary/5 transition-all cursor-pointer group"
               data-testid="button-choice-student"
             >
@@ -206,7 +206,7 @@ export function HeroCarousel() {
               <span className="text-xs text-muted-foreground text-center">Study in Pakistan's top universities</span>
             </a>
             <a
-              href="/api/login"
+              href="/register"
               className="flex flex-col items-center gap-3 p-6 rounded-lg border-2 border-border hover:border-accent hover:bg-accent/5 transition-all cursor-pointer group"
               data-testid="button-choice-patient"
             >
@@ -220,7 +220,7 @@ export function HeroCarousel() {
           <div className="text-center pt-2">
             <p className="text-sm text-muted-foreground">
               Already have an account?{" "}
-              <a href="/api/login" className="text-primary font-medium hover:underline" data-testid="link-dialog-login">
+              <a href="/login" className="text-primary font-medium hover:underline" data-testid="link-dialog-login">
                 Log In
               </a>
             </p>

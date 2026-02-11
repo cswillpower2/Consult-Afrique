@@ -1,8 +1,8 @@
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { isAuthenticated } from "./replit_integrations/auth";
-import { insertContactInquirySchema, updateUserProfileSchema } from "@shared/schema";
+import { isAuthenticated } from "./auth";
+import { insertContactInquirySchema, updateUserProfileSchema, insertNewsArticleSchema, updateNewsArticleSchema } from "@shared/schema";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -12,7 +12,7 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim
 
 // Middleware to check if user is admin
 const isAdmin = (req: any, res: Response, next: NextFunction) => {
-  const userEmail = req.user?.claims?.email?.toLowerCase();
+  const userEmail = req.user?.email?.toLowerCase();
   if (!userEmail || !ADMIN_EMAILS.includes(userEmail)) {
     return res.status(403).json({ message: "Access denied. Admin privileges required." });
   }
@@ -51,7 +51,7 @@ export async function registerRoutes(
 
   app.get("/api/profile", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const profile = await storage.getProfile(userId);
       if (profile) {
         res.json(profile);
@@ -66,7 +66,7 @@ export async function registerRoutes(
 
   app.post("/api/profile", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const parsed = updateUserProfileSchema.safeParse(req.body);
       
       if (!parsed.success) {
@@ -83,7 +83,7 @@ export async function registerRoutes(
 
   app.get("/api/documents", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const docs = await storage.getDocuments(userId);
       res.json(docs);
     } catch (error) {
@@ -94,7 +94,7 @@ export async function registerRoutes(
 
   app.post("/api/documents", isAuthenticated, upload.single("file"), async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const file = req.file;
       const documentType = req.body.documentType;
 
@@ -118,7 +118,7 @@ export async function registerRoutes(
 
   app.delete("/api/documents/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const success = await storage.deleteDocument(req.params.id, userId);
       if (success) {
         res.json({ success: true });
@@ -161,7 +161,7 @@ export async function registerRoutes(
 
   // Check if current user is admin
   app.get("/api/admin/check", isAuthenticated, async (req: any, res) => {
-    const userEmail = req.user?.claims?.email?.toLowerCase();
+    const userEmail = req.user?.email?.toLowerCase();
     const isAdminUser = userEmail && ADMIN_EMAILS.includes(userEmail);
     res.json({ isAdmin: isAdminUser });
   });
@@ -240,6 +240,91 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching inquiries:", error);
       res.status(500).json({ message: "Failed to fetch inquiries" });
+    }
+  });
+
+  // Public news endpoints
+  app.get("/api/news", async (req, res) => {
+    try {
+      const articles = await storage.getPublishedNews();
+      res.json(articles);
+    } catch (error) {
+      console.error("Error fetching news:", error);
+      res.status(500).json({ message: "Failed to fetch news" });
+    }
+  });
+
+  app.get("/api/news/:id", async (req, res) => {
+    try {
+      const article = await storage.getNewsById(req.params.id);
+      if (article && article.isPublished) {
+        res.json(article);
+      } else {
+        res.status(404).json({ message: "Article not found" });
+      }
+    } catch (error) {
+      console.error("Error fetching article:", error);
+      res.status(500).json({ message: "Failed to fetch article" });
+    }
+  });
+
+  // Admin news endpoints
+  app.get("/api/admin/news", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const articles = await storage.getAllNews();
+      res.json(articles);
+    } catch (error) {
+      console.error("Error fetching news:", error);
+      res.status(500).json({ message: "Failed to fetch news" });
+    }
+  });
+
+  app.post("/api/admin/news", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const parsed = insertNewsArticleSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid data", errors: parsed.error.errors });
+      }
+      const article = await storage.createNews({
+        ...parsed.data,
+        authorId: req.user.id,
+      });
+      res.status(201).json(article);
+    } catch (error) {
+      console.error("Error creating news:", error);
+      res.status(500).json({ message: "Failed to create article" });
+    }
+  });
+
+  app.patch("/api/admin/news/:id", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const parsed = updateNewsArticleSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid data", errors: parsed.error.errors });
+      }
+      const article = await storage.updateNews(req.params.id, parsed.data);
+      if (article) {
+        res.json(article);
+      } else {
+        res.status(404).json({ message: "Article not found" });
+      }
+    } catch (error) {
+      console.error("Error updating news:", error);
+      res.status(500).json({ message: "Failed to update article" });
+    }
+  });
+
+  app.delete("/api/admin/news/:id", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const success = await storage.deleteNews(req.params.id);
+      if (success) {
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ message: "Article not found" });
+      }
+    } catch (error) {
+      console.error("Error deleting news:", error);
+      res.status(500).json({ message: "Failed to delete article" });
     }
   });
 

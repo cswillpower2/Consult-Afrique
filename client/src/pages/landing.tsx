@@ -4,6 +4,7 @@ import { Services } from "@/components/landing/services";
 import { About } from "@/components/landing/about";
 import { Team } from "@/components/landing/team";
 import { Contact } from "@/components/landing/contact";
+import { NewsSection } from "@/components/landing/news-section";
 import { Footer } from "@/components/landing/footer";
 import { WhatsAppButton } from "@/components/landing/whatsapp-button";
 
@@ -15,6 +16,7 @@ export default function Landing() {
       <Services />
       <About />
       <Team />
+      <NewsSection />
       <Contact />
       <Footer />
       <WhatsAppButton />
