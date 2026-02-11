@@ -19,6 +19,8 @@ export const userProfiles = pgTable("user_profiles", {
   applicationStatus: varchar("application_status", { 
     enum: ["pending", "in_review", "approved", "rejected", "resubmission_required"] 
   }).default("pending"),
+  preferredFieldOfStudy: varchar("preferred_field_of_study"),
+  secondFieldOfStudy: varchar("second_field_of_study"),
   medicalHistory: text("medical_history"),
   diagnosis: text("diagnosis"),
   symptoms: text("symptoms"),

@@ -51,6 +51,25 @@ const menuItems = [
   { icon: Settings, label: "Settings", path: "/dashboard/settings" },
 ];
 
+const fieldOfStudyOptions = [
+  "Medicine & Surgery (MBBS)",
+  "Dental Surgery (BDS)",
+  "Pharmacy (Pharm.D)",
+  "Nursing (BSN)",
+  "Engineering (Various)",
+  "Computer Science / IT",
+  "Business Administration (BBA/MBA)",
+  "Law (LLB)",
+  "Architecture",
+  "Agriculture",
+  "Arts & Humanities",
+  "Social Sciences",
+  "Natural Sciences",
+  "Education",
+  "Media & Communication",
+  "Other",
+];
+
 const profileSchema = z.object({
   userType: z.enum(["student", "patient"]),
   fullName: z.string().min(2, "Name must be at least 2 characters"),
@@ -59,6 +78,8 @@ const profileSchema = z.object({
   nationality: z.string().min(2, "Nationality is required"),
   address: z.string().min(10, "Please enter a complete address"),
   phoneNumber: z.string().min(10, "Please enter a valid phone number"),
+  preferredFieldOfStudy: z.string().optional(),
+  secondFieldOfStudy: z.string().optional(),
   medicalHistory: z.string().optional(),
   diagnosis: z.string().optional(),
   symptoms: z.string().optional(),
@@ -88,6 +109,8 @@ export default function Profile() {
       nationality: "",
       address: "",
       phoneNumber: "",
+      preferredFieldOfStudy: "",
+      secondFieldOfStudy: "",
       medicalHistory: "",
       diagnosis: "",
       symptoms: "",
@@ -108,6 +131,8 @@ export default function Profile() {
         nationality: profile.nationality || "",
         address: profile.address || "",
         phoneNumber: profile.phoneNumber || "",
+        preferredFieldOfStudy: profile.preferredFieldOfStudy || "",
+        secondFieldOfStudy: profile.secondFieldOfStudy || "",
         medicalHistory: profile.medicalHistory || "",
         diagnosis: profile.diagnosis || "",
         symptoms: profile.symptoms || "",
@@ -378,6 +403,60 @@ export default function Profile() {
                             </FormItem>
                           )}
                         />
+
+                        {userType === "student" && (
+                          <>
+                            <div className="border-t pt-6">
+                              <h3 className="font-medium mb-4">Field of Study</h3>
+                              <div className="space-y-4">
+                                <FormField
+                                  control={form.control}
+                                  name="preferredFieldOfStudy"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Preferred Field of Study</FormLabel>
+                                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                                        <FormControl>
+                                          <SelectTrigger data-testid="select-field-of-study">
+                                            <SelectValue placeholder="Select your preferred field" />
+                                          </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                          {fieldOfStudyOptions.map((option) => (
+                                            <SelectItem key={option} value={option}>{option}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={form.control}
+                                  name="secondFieldOfStudy"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Alternative Field of Study (Optional)</FormLabel>
+                                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                                        <FormControl>
+                                          <SelectTrigger data-testid="select-second-field-of-study">
+                                            <SelectValue placeholder="Select an alternative field" />
+                                          </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                          {fieldOfStudyOptions.map((option) => (
+                                            <SelectItem key={option} value={option}>{option}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+                            </div>
+                          </>
+                        )}
 
                         {userType === "patient" && (
                           <>

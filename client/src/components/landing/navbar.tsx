@@ -161,9 +161,14 @@ export function Navbar() {
                     Dashboard
                   </Button>
                 ) : (
-                  <Button asChild className="w-full" data-testid="button-mobile-apply">
-                    <a href="/api/login">Apply Now</a>
-                  </Button>
+                  <>
+                    <Button variant="outline" asChild className="w-full" data-testid="button-mobile-login">
+                      <a href="/api/login">Log In</a>
+                    </Button>
+                    <Button asChild className="w-full" data-testid="button-mobile-apply">
+                      <a href="/api/login">Get Started</a>
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
