@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, ArrowRight } from "lucide-react";
+import { Calendar } from "lucide-react";
 import type { NewsArticle } from "@shared/schema";
 
 export function NewsSection() {
@@ -24,10 +24,11 @@ export function NewsSection() {
           <div className="grid md:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
               <Card key={i}>
-                <CardContent className="p-6 space-y-4">
+                <Skeleton className="h-48 w-full rounded-t-md" />
+                <CardContent className="p-5 space-y-3">
                   <Skeleton className="h-4 w-24" />
                   <Skeleton className="h-6 w-full" />
-                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-12 w-full" />
                 </CardContent>
               </Card>
             ))}
@@ -56,8 +57,18 @@ export function NewsSection() {
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayedArticles.map((article) => (
-            <Card key={article.id} className="group overflow-visible hover-elevate">
-              <CardContent className="p-6 space-y-3">
+            <Card key={article.id} className="group overflow-hidden">
+              {article.imageUrl && (
+                <div className="relative h-48 overflow-hidden">
+                  <img
+                    src={article.imageUrl}
+                    alt={article.title}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    data-testid={`img-news-${article.id}`}
+                  />
+                </div>
+              )}
+              <CardContent className="p-5 space-y-3">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Calendar className="w-3 h-3" />
                   <time>

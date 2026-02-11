@@ -7,7 +7,8 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
   Users, FileText, Mail, ArrowLeft, CheckCircle, XCircle, 
   Clock, Eye, RefreshCw, ChevronDown, User, Phone, Calendar,
-  FileCheck, AlertCircle, Newspaper, Plus, Pencil, Trash2
+  FileCheck, AlertCircle, Newspaper, Plus, Pencil, Trash2,
+  Upload, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -111,7 +112,10 @@ export default function AdminDashboard() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [newsDialogOpen, setNewsDialogOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<NewsArticle | null>(null);
-  const [newsForm, setNewsForm] = useState({ title: "", summary: "", content: "", imageUrl: "", isPublished: false });
+  const [newsForm, setNewsForm] = useState({ title: "", summary: "", content: "", isPublished: false });
+  const [newsImageFile, setNewsImageFile] = useState<File | null>(null);
+  const [newsImagePreview, setNewsImagePreview] = useState<string | null>(null);
+  const [removeExistingImage, setRemoveExistingImage] = useState(false);
 
   // Check if user is admin
   const { data: adminCheck, isLoading: adminCheckLoading } = useQuery<{ isAdmin: boolean }>({
@@ -154,11 +158,16 @@ export default function AdminDashboard() {
   });
 
   const createNewsMutation = useMutation({
-    mutationFn: async (data: typeof newsForm) => {
-      return apiRequest("POST", "/api/admin/news", {
-        ...data,
-        publishedAt: data.isPublished ? new Date().toISOString() : null,
-      });
+    mutationFn: async ({ data, imageFile }: { data: typeof newsForm; imageFile: File | null }) => {
+      const formData = new FormData();
+      formData.append("title", data.title);
+      formData.append("summary", data.summary);
+      formData.append("content", data.content);
+      formData.append("isPublished", String(data.isPublished));
+      if (imageFile) formData.append("image", imageFile);
+      const res = await fetch("/api/admin/news", { method: "POST", body: formData, credentials: "include" });
+      if (!res.ok) throw new Error("Failed to create article");
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/news"] });
@@ -173,11 +182,17 @@ export default function AdminDashboard() {
   });
 
   const updateNewsMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: typeof newsForm }) => {
-      return apiRequest("PATCH", `/api/admin/news/${id}`, {
-        ...data,
-        publishedAt: data.isPublished ? new Date().toISOString() : null,
-      });
+    mutationFn: async ({ id, data, imageFile, removeImage }: { id: string; data: typeof newsForm; imageFile: File | null; removeImage: boolean }) => {
+      const formData = new FormData();
+      formData.append("title", data.title);
+      formData.append("summary", data.summary);
+      formData.append("content", data.content);
+      formData.append("isPublished", String(data.isPublished));
+      if (imageFile) formData.append("image", imageFile);
+      if (removeImage) formData.append("removeImage", "true");
+      const res = await fetch(`/api/admin/news/${id}`, { method: "PATCH", body: formData, credentials: "include" });
+      if (!res.ok) throw new Error("Failed to update article");
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/news"] });
@@ -207,7 +222,10 @@ export default function AdminDashboard() {
   });
 
   const resetNewsForm = () => {
-    setNewsForm({ title: "", summary: "", content: "", imageUrl: "", isPublished: false });
+    setNewsForm({ title: "", summary: "", content: "", isPublished: false });
+    setNewsImageFile(null);
+    setNewsImagePreview(null);
+    setRemoveExistingImage(false);
   };
 
   const openNewArticle = () => {
@@ -222,10 +240,29 @@ export default function AdminDashboard() {
       title: article.title,
       summary: article.summary,
       content: article.content,
-      imageUrl: article.imageUrl || "",
       isPublished: article.isPublished,
     });
+    setNewsImageFile(null);
+    setNewsImagePreview(article.imageUrl || null);
+    setRemoveExistingImage(false);
     setNewsDialogOpen(true);
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setNewsImageFile(file);
+      setRemoveExistingImage(false);
+      const reader = new FileReader();
+      reader.onload = (ev) => setNewsImagePreview(ev.target?.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setNewsImageFile(null);
+    setNewsImagePreview(null);
+    setRemoveExistingImage(true);
   };
 
   const handleNewsSubmit = () => {
@@ -234,9 +271,9 @@ export default function AdminDashboard() {
       return;
     }
     if (editingArticle) {
-      updateNewsMutation.mutate({ id: editingArticle.id, data: newsForm });
+      updateNewsMutation.mutate({ id: editingArticle.id, data: newsForm, imageFile: newsImageFile, removeImage: removeExistingImage });
     } else {
-      createNewsMutation.mutate(newsForm);
+      createNewsMutation.mutate({ data: newsForm, imageFile: newsImageFile });
     }
   };
 
@@ -703,14 +740,45 @@ export default function AdminDashboard() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="news-image">Image URL (optional)</Label>
-              <Input
-                id="news-image"
-                value={newsForm.imageUrl}
-                onChange={(e) => setNewsForm(prev => ({ ...prev, imageUrl: e.target.value }))}
-                placeholder="https://example.com/image.jpg"
-                data-testid="input-news-image"
-              />
+              <Label>Image (optional)</Label>
+              {newsImagePreview ? (
+                <div className="relative">
+                  <img
+                    src={newsImagePreview}
+                    alt="Preview"
+                    className="w-full h-40 object-cover rounded-md"
+                    data-testid="img-news-preview"
+                  />
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    className="absolute top-2 right-2"
+                    onClick={handleRemoveImage}
+                    type="button"
+                    data-testid="button-remove-news-image"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <label
+                  htmlFor="news-image-upload"
+                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-md cursor-pointer border-muted-foreground/25 hover-elevate"
+                  data-testid="label-news-image-upload"
+                >
+                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                  <span className="text-sm text-muted-foreground">Click to upload an image</span>
+                  <span className="text-xs text-muted-foreground mt-1">JPG, PNG, GIF, WebP (max 5MB)</span>
+                  <input
+                    id="news-image-upload"
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    className="hidden"
+                    onChange={handleImageSelect}
+                    data-testid="input-news-image"
+                  />
+                </label>
+              )}
             </div>
             <div className="flex items-center gap-3">
               <Switch

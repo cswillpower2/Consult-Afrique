@@ -20,8 +20,12 @@ const isAdmin = (req: any, res: Response, next: NextFunction) => {
 };
 
 const uploadDir = "./uploads";
+const newsUploadDir = "./uploads/news";
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
+}
+if (!fs.existsSync(newsUploadDir)) {
+  fs.mkdirSync(newsUploadDir, { recursive: true });
 }
 
 const upload = multer({
@@ -40,6 +44,26 @@ const upload = multer({
       cb(null, true);
     } else {
       cb(new Error("Invalid file type"));
+    }
+  },
+});
+
+const newsImageUpload = multer({
+  storage: multer.diskStorage({
+    destination: newsUploadDir,
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      cb(null, uniqueSuffix + path.extname(file.originalname));
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed"));
     }
   },
 });
@@ -243,6 +267,16 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/uploads/news/:filename", (req, res) => {
+    const filename = path.basename(req.params.filename);
+    const filePath = path.join(newsUploadDir, filename);
+    if (fs.existsSync(filePath)) {
+      res.sendFile(path.resolve(filePath));
+    } else {
+      res.status(404).json({ message: "Image not found" });
+    }
+  });
+
   // Public news endpoints
   app.get("/api/news", async (req, res) => {
     try {
@@ -279,16 +313,21 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/admin/news", isAuthenticated, isAdmin, async (req: any, res) => {
+  app.post("/api/admin/news", isAuthenticated, isAdmin, newsImageUpload.single("image"), async (req: any, res) => {
     try {
-      const parsed = insertNewsArticleSchema.safeParse(req.body);
-      if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid data", errors: parsed.error.errors });
-      }
-      const article = await storage.createNews({
-        ...parsed.data,
+      const data = {
+        title: req.body.title,
+        summary: req.body.summary,
+        content: req.body.content,
+        isPublished: req.body.isPublished === "true" || req.body.isPublished === true,
+        publishedAt: (req.body.isPublished === "true" || req.body.isPublished === true) ? new Date() : null,
+        imageUrl: req.file ? `/uploads/news/${req.file.filename}` : null,
         authorId: req.user.id,
-      });
+      };
+      if (!data.title || !data.summary || !data.content) {
+        return res.status(400).json({ message: "Title, summary, and content are required" });
+      }
+      const article = await storage.createNews(data);
       res.status(201).json(article);
     } catch (error) {
       console.error("Error creating news:", error);
@@ -296,13 +335,33 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/admin/news/:id", isAuthenticated, isAdmin, async (req: any, res) => {
+  app.patch("/api/admin/news/:id", isAuthenticated, isAdmin, newsImageUpload.single("image"), async (req: any, res) => {
     try {
-      const parsed = updateNewsArticleSchema.safeParse(req.body);
-      if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid data", errors: parsed.error.errors });
+      const data: any = {};
+      if (req.body.title !== undefined) data.title = req.body.title;
+      if (req.body.summary !== undefined) data.summary = req.body.summary;
+      if (req.body.content !== undefined) data.content = req.body.content;
+      if (req.body.isPublished !== undefined) {
+        data.isPublished = req.body.isPublished === "true" || req.body.isPublished === true;
+        data.publishedAt = data.isPublished ? new Date() : null;
       }
-      const article = await storage.updateNews(req.params.id, parsed.data);
+      if (req.file) {
+        const existing = await storage.getNewsById(req.params.id);
+        if (existing?.imageUrl) {
+          const oldPath = path.join(".", existing.imageUrl);
+          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+        }
+        data.imageUrl = `/uploads/news/${req.file.filename}`;
+      }
+      if (req.body.removeImage === "true") {
+        const existing = await storage.getNewsById(req.params.id);
+        if (existing?.imageUrl) {
+          const oldPath = path.join(".", existing.imageUrl);
+          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+        }
+        data.imageUrl = null;
+      }
+      const article = await storage.updateNews(req.params.id, data);
       if (article) {
         res.json(article);
       } else {
@@ -316,6 +375,11 @@ export async function registerRoutes(
 
   app.delete("/api/admin/news/:id", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
+      const existing = await storage.getNewsById(req.params.id);
+      if (existing?.imageUrl) {
+        const oldPath = path.join(".", existing.imageUrl);
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      }
       const success = await storage.deleteNews(req.params.id);
       if (success) {
         res.json({ success: true });
