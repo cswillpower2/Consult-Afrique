@@ -113,7 +113,7 @@ export class DatabaseStorage implements IStorage {
   async deleteDocument(id: string, userId: string): Promise<boolean> {
     const result = await db
       .delete(documents)
-      .where(eq(documents.id, id))
+      .where(and(eq(documents.id, id), eq(documents.userId, userId)))
       .returning();
     return result.length > 0;
   }

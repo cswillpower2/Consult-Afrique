@@ -2,10 +2,27 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
+import rateLimit from "express-rate-limit";
 import type { Express, RequestHandler, Request, Response, NextFunction } from "express";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 import { users, passwordResetTokens } from "@shared/models/auth";
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  message: { message: "Too many attempts, please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { message: "Too many password reset requests, please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 declare module "express-session" {
   interface SessionData {
@@ -61,7 +78,7 @@ export function registerAuthRoutes(app: Express) {
     res.json(safeUser);
   });
 
-  app.post("/api/auth/register", async (req, res) => {
+  app.post("/api/auth/register", authLimiter, async (req, res) => {
     try {
       const { email, password, firstName, lastName } = req.body;
       
@@ -100,7 +117,7 @@ export function registerAuthRoutes(app: Express) {
     }
   });
 
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", authLimiter, async (req, res) => {
     try {
       const { email, password } = req.body;
       
@@ -139,7 +156,7 @@ export function registerAuthRoutes(app: Express) {
     });
   });
 
-  app.post("/api/auth/forgot-password", async (req, res) => {
+  app.post("/api/auth/forgot-password", forgotPasswordLimiter, async (req, res) => {
     try {
       const { email } = req.body;
       
@@ -166,8 +183,8 @@ export function registerAuthRoutes(app: Express) {
         const { sendPasswordResetEmail } = await import("./mailer");
         const resetUrl = `${req.protocol}://${req.get("host")}/reset-password?token=${token}`;
         await sendPasswordResetEmail(email, resetUrl);
-      } else {
-        console.log(`[DEV] Password reset link for ${email}: /reset-password?token=${token}`);
+      } else if (process.env.NODE_ENV !== "production") {
+        console.log(`[DEV] Password reset token generated for ${email}`);
       }
     } catch (error) {
       console.error("Forgot password error:", error);

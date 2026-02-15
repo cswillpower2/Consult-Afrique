@@ -6,6 +6,15 @@ import { insertContactInquirySchema, updateUserProfileSchema, insertNewsArticleS
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import rateLimit from "express-rate-limit";
+
+const contactLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { message: "Too many contact submissions, please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Admin emails - add admin user emails here
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
@@ -155,7 +164,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/contact", async (req, res) => {
+  app.post("/api/contact", contactLimiter, async (req, res) => {
     try {
       const parsed = insertContactInquirySchema.safeParse(req.body);
       
@@ -172,7 +181,7 @@ export async function registerRoutes(
   });
 
   app.get("/uploads/:filename", isAuthenticated, (req: any, res) => {
-    const filename = req.params.filename;
+    const filename = path.basename(req.params.filename);
     const filePath = path.join(uploadDir, filename);
     
     if (!fs.existsSync(filePath)) {
