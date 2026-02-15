@@ -83,6 +83,7 @@ interface NewsArticle {
   summary: string;
   content: string;
   imageUrl: string | null;
+  images: string[] | null;
   isPublished: boolean;
   publishedAt: string | null;
   authorId: string | null;
@@ -113,9 +114,8 @@ export default function AdminDashboard() {
   const [newsDialogOpen, setNewsDialogOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<NewsArticle | null>(null);
   const [newsForm, setNewsForm] = useState({ title: "", summary: "", content: "", isPublished: false });
-  const [newsImageFile, setNewsImageFile] = useState<File | null>(null);
-  const [newsImagePreview, setNewsImagePreview] = useState<string | null>(null);
-  const [removeExistingImage, setRemoveExistingImage] = useState(false);
+  const [newsImageFiles, setNewsImageFiles] = useState<File[]>([]);
+  const [newsImagePreviews, setNewsImagePreviews] = useState<{ src: string; isExisting: boolean; path?: string }[]>([]);
 
   // Check if user is admin
   const { data: adminCheck, isLoading: adminCheckLoading } = useQuery<{ isAdmin: boolean }>({
@@ -158,13 +158,13 @@ export default function AdminDashboard() {
   });
 
   const createNewsMutation = useMutation({
-    mutationFn: async ({ data, imageFile }: { data: typeof newsForm; imageFile: File | null }) => {
+    mutationFn: async ({ data, imageFiles }: { data: typeof newsForm; imageFiles: File[] }) => {
       const formData = new FormData();
       formData.append("title", data.title);
       formData.append("summary", data.summary);
       formData.append("content", data.content);
       formData.append("isPublished", String(data.isPublished));
-      if (imageFile) formData.append("image", imageFile);
+      imageFiles.forEach((file) => formData.append("images", file));
       const res = await fetch("/api/admin/news", { method: "POST", body: formData, credentials: "include" });
       if (!res.ok) throw new Error("Failed to create article");
       return res.json();
@@ -182,14 +182,14 @@ export default function AdminDashboard() {
   });
 
   const updateNewsMutation = useMutation({
-    mutationFn: async ({ id, data, imageFile, removeImage }: { id: string; data: typeof newsForm; imageFile: File | null; removeImage: boolean }) => {
+    mutationFn: async ({ id, data, imageFiles, existingImages }: { id: string; data: typeof newsForm; imageFiles: File[]; existingImages: string[] }) => {
       const formData = new FormData();
       formData.append("title", data.title);
       formData.append("summary", data.summary);
       formData.append("content", data.content);
       formData.append("isPublished", String(data.isPublished));
-      if (imageFile) formData.append("image", imageFile);
-      if (removeImage) formData.append("removeImage", "true");
+      formData.append("existingImages", JSON.stringify(existingImages));
+      imageFiles.forEach((file) => formData.append("images", file));
       const res = await fetch(`/api/admin/news/${id}`, { method: "PATCH", body: formData, credentials: "include" });
       if (!res.ok) throw new Error("Failed to update article");
       return res.json();
@@ -223,9 +223,8 @@ export default function AdminDashboard() {
 
   const resetNewsForm = () => {
     setNewsForm({ title: "", summary: "", content: "", isPublished: false });
-    setNewsImageFile(null);
-    setNewsImagePreview(null);
-    setRemoveExistingImage(false);
+    setNewsImageFiles([]);
+    setNewsImagePreviews([]);
   };
 
   const openNewArticle = () => {
@@ -242,27 +241,47 @@ export default function AdminDashboard() {
       content: article.content,
       isPublished: article.isPublished,
     });
-    setNewsImageFile(null);
-    setNewsImagePreview(article.imageUrl || null);
-    setRemoveExistingImage(false);
+    setNewsImageFiles([]);
+    const existingPreviews = (article.images || []).map((img: string) => ({
+      src: img,
+      isExisting: true,
+      path: img,
+    }));
+    if (existingPreviews.length === 0 && article.imageUrl) {
+      existingPreviews.push({ src: article.imageUrl, isExisting: true, path: article.imageUrl });
+    }
+    setNewsImagePreviews(existingPreviews);
     setNewsDialogOpen(true);
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setNewsImageFile(file);
-      setRemoveExistingImage(false);
-      const reader = new FileReader();
-      reader.onload = (ev) => setNewsImagePreview(ev.target?.result as string);
-      reader.readAsDataURL(file);
+  const handleImagesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    const remaining = 10 - newsImagePreviews.length;
+    if (remaining <= 0) return;
+    if (files.length > remaining) {
+      files = files.slice(0, remaining);
+      toast({ title: `Only ${remaining} more image(s) can be added (max 10)` });
     }
+    const newFiles = [...newsImageFiles, ...files];
+    setNewsImageFiles(newFiles);
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setNewsImagePreviews((prev) => [...prev, { src: ev.target?.result as string, isExisting: false }]);
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = "";
   };
 
-  const handleRemoveImage = () => {
-    setNewsImageFile(null);
-    setNewsImagePreview(null);
-    setRemoveExistingImage(true);
+  const handleRemoveImage = (index: number) => {
+    const preview = newsImagePreviews[index];
+    if (!preview.isExisting) {
+      const newFileIndex = newsImagePreviews.slice(0, index).filter((p) => !p.isExisting).length;
+      setNewsImageFiles((prev) => prev.filter((_, i) => i !== newFileIndex));
+    }
+    setNewsImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleNewsSubmit = () => {
@@ -271,9 +290,10 @@ export default function AdminDashboard() {
       return;
     }
     if (editingArticle) {
-      updateNewsMutation.mutate({ id: editingArticle.id, data: newsForm, imageFile: newsImageFile, removeImage: removeExistingImage });
+      const existingImages = newsImagePreviews.filter((p) => p.isExisting).map((p) => p.path!);
+      updateNewsMutation.mutate({ id: editingArticle.id, data: newsForm, imageFiles: newsImageFiles, existingImages });
     } else {
-      createNewsMutation.mutate({ data: newsForm, imageFile: newsImageFile });
+      createNewsMutation.mutate({ data: newsForm, imageFiles: newsImageFiles });
     }
   };
 
@@ -740,41 +760,47 @@ export default function AdminDashboard() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Image (optional)</Label>
-              {newsImagePreview ? (
-                <div className="relative">
-                  <img
-                    src={newsImagePreview}
-                    alt="Preview"
-                    className="w-full h-40 object-cover rounded-md"
-                    data-testid="img-news-preview"
-                  />
-                  <Button
-                    size="icon"
-                    variant="secondary"
-                    className="absolute top-2 right-2"
-                    onClick={handleRemoveImage}
-                    type="button"
-                    data-testid="button-remove-news-image"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+              <Label>Images (optional, up to 10)</Label>
+              {newsImagePreviews.length > 0 && (
+                <div className="grid grid-cols-3 gap-2">
+                  {newsImagePreviews.map((preview, index) => (
+                    <div key={index} className="relative group/img">
+                      <img
+                        src={preview.src}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-24 object-cover rounded-md"
+                        data-testid={`img-news-preview-${index}`}
+                      />
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        className="absolute top-1 right-1 h-6 w-6 invisible group-hover/img:visible"
+                        onClick={() => handleRemoveImage(index)}
+                        type="button"
+                        data-testid={`button-remove-news-image-${index}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-              ) : (
+              )}
+              {newsImagePreviews.length < 10 && (
                 <label
                   htmlFor="news-image-upload"
-                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-md cursor-pointer border-muted-foreground/25 hover-elevate"
+                  className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-md cursor-pointer border-muted-foreground/25 hover-elevate"
                   data-testid="label-news-image-upload"
                 >
-                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                  <span className="text-sm text-muted-foreground">Click to upload an image</span>
-                  <span className="text-xs text-muted-foreground mt-1">JPG, PNG, GIF, WebP (max 5MB)</span>
+                  <Upload className="h-6 w-6 text-muted-foreground mb-1" />
+                  <span className="text-sm text-muted-foreground">Click to add images</span>
+                  <span className="text-xs text-muted-foreground">JPG, PNG, GIF, WebP (max 5MB each)</span>
                   <input
                     id="news-image-upload"
                     type="file"
                     accept="image/jpeg,image/png,image/gif,image/webp"
                     className="hidden"
-                    onChange={handleImageSelect}
+                    onChange={handleImagesSelect}
+                    multiple
                     data-testid="input-news-image"
                   />
                 </label>

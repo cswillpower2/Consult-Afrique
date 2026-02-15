@@ -57,6 +57,7 @@ export const newsArticles = pgTable("news_articles", {
   summary: text("summary").notNull(),
   content: text("content").notNull(),
   imageUrl: varchar("image_url"),
+  images: text("images").array().default(sql`'{}'::text[]`),
   isPublished: boolean("is_published").default(false),
   publishedAt: timestamp("published_at"),
   authorId: varchar("author_id"),

@@ -313,15 +313,18 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/admin/news", isAuthenticated, isAdmin, newsImageUpload.single("image"), async (req: any, res) => {
+  app.post("/api/admin/news", isAuthenticated, isAdmin, newsImageUpload.array("images", 10), async (req: any, res) => {
     try {
+      const files = req.files as Express.Multer.File[] | undefined;
+      const imagePaths = files ? files.map((f: Express.Multer.File) => `/uploads/news/${f.filename}`) : [];
       const data = {
         title: req.body.title,
         summary: req.body.summary,
         content: req.body.content,
         isPublished: req.body.isPublished === "true" || req.body.isPublished === true,
         publishedAt: (req.body.isPublished === "true" || req.body.isPublished === true) ? new Date() : null,
-        imageUrl: req.file ? `/uploads/news/${req.file.filename}` : null,
+        imageUrl: imagePaths[0] || null,
+        images: imagePaths,
         authorId: req.user.id,
       };
       if (!data.title || !data.summary || !data.content) {
@@ -335,7 +338,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/admin/news/:id", isAuthenticated, isAdmin, newsImageUpload.single("image"), async (req: any, res) => {
+  app.patch("/api/admin/news/:id", isAuthenticated, isAdmin, newsImageUpload.array("images", 10), async (req: any, res) => {
     try {
       const data: any = {};
       if (req.body.title !== undefined) data.title = req.body.title;
@@ -345,22 +348,30 @@ export async function registerRoutes(
         data.isPublished = req.body.isPublished === "true" || req.body.isPublished === true;
         data.publishedAt = data.isPublished ? new Date() : null;
       }
-      if (req.file) {
-        const existing = await storage.getNewsById(req.params.id);
-        if (existing?.imageUrl) {
-          const oldPath = path.join(".", existing.imageUrl);
+
+      const files = req.files as Express.Multer.File[] | undefined;
+      const newImagePaths = files ? files.map((f: Express.Multer.File) => `/uploads/news/${f.filename}`) : [];
+      let existingImages: string[] = [];
+      try {
+        existingImages = req.body.existingImages ? (Array.isArray(req.body.existingImages) ? req.body.existingImages : JSON.parse(req.body.existingImages)) : [];
+      } catch { existingImages = []; }
+      const existing = await storage.getNewsById(req.params.id);
+
+      if (files?.length || req.body.existingImages !== undefined) {
+        const oldImages = [...(existing?.images || [])];
+        if (existing?.imageUrl && !oldImages.includes(existing.imageUrl)) {
+          oldImages.push(existing.imageUrl);
+        }
+        const removedImages = oldImages.filter((img: string) => !existingImages.includes(img));
+        for (const img of removedImages) {
+          const oldPath = path.join(".", img);
           if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
         }
-        data.imageUrl = `/uploads/news/${req.file.filename}`;
+        const allImages = [...existingImages, ...newImagePaths];
+        data.images = allImages;
+        data.imageUrl = allImages[0] || null;
       }
-      if (req.body.removeImage === "true") {
-        const existing = await storage.getNewsById(req.params.id);
-        if (existing?.imageUrl) {
-          const oldPath = path.join(".", existing.imageUrl);
-          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-        }
-        data.imageUrl = null;
-      }
+
       const article = await storage.updateNews(req.params.id, data);
       if (article) {
         res.json(article);
@@ -376,8 +387,12 @@ export async function registerRoutes(
   app.delete("/api/admin/news/:id", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const existing = await storage.getNewsById(req.params.id);
-      if (existing?.imageUrl) {
-        const oldPath = path.join(".", existing.imageUrl);
+      const allImages = [...(existing?.images || [])];
+      if (existing?.imageUrl && !allImages.includes(existing.imageUrl)) {
+        allImages.push(existing.imageUrl);
+      }
+      for (const img of allImages) {
+        const oldPath = path.join(".", img);
         if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
       }
       const success = await storage.deleteNews(req.params.id);
