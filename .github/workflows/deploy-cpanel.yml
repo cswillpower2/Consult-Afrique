@@ -1,0 +1,80 @@
+name: Deploy to cPanel
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js 18
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build application
+      run: npm run build
+      env:
+        NODE_ENV: production
+
+    - name: Setup SSH agent
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Add known hosts
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+    - name: Create deployment directory
+      run: |
+        ssh -o StrictHostKeyChecking=no \
+          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+          "mkdir -p ${{ secrets.DEPLOY_PATH }}"
+
+    - name: Upload files via RSYNC
+      run: |
+        rsync -avz --delete \
+          -e "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30" \
+          ./dist/ \
+          ./package.json \
+          ./package-lock.json \
+          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/
+
+    - name: Install and start application
+      run: |
+        ssh -o StrictHostKeyChecking=no \
+          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+        
+        cd ${{ secrets.DEPLOY_PATH }}
+        
+        # Load NVM
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        
+        # Install production dependencies
+        npm install --production --omit=dev
+        
+        # Stop old process
+        pm2 delete consult-afrique 2>/dev/null || true
+        
+        # Start with PM2
+        pm2 start dist/index.cjs --name "consult-afrique" --instances max
+        pm2 save
+        
+        # Show status
+        pm2 status
+        
+        echo "✅ Deployment completed!"
+        EOF
