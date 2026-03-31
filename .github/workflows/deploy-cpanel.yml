@@ -59,21 +59,15 @@ jobs:
         
         cd ${{ secrets.DEPLOY_PATH }}
         
-        # Load NVM
         export NVM_DIR="$HOME/.nvm"
         [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
         
-        # Install production dependencies
         npm install --production --omit=dev
         
-        # Stop old process
         pm2 delete consult-afrique 2>/dev/null || true
-        
-        # Start with PM2
         pm2 start dist/index.cjs --name "consult-afrique" --instances max
         pm2 save
         
-        # Show status
         pm2 status
         
         echo "✅ Deployment completed!"
