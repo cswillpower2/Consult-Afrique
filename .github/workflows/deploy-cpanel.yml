@@ -35,40 +35,24 @@ jobs:
     - name: Add known hosts
       run: |
         mkdir -p ~/.ssh
-        ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
-
-    - name: Create deployment directory
-      run: |
-        ssh -o StrictHostKeyChecking=no \
-          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-          "mkdir -p ${{ secrets.DEPLOY_PATH }}"
-
-    - name: Upload files via RSYNC
+        ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+        
+    - name: Deploy files via RSYNC
       run: |
         rsync -avz --delete \
-          -e "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30" \
+          -e "ssh -o StrictHostKeyChecking=no" \
           ./dist/ \
           ./package.json \
-          ./package-lock.json \
           ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/
 
-    - name: Install and start application
+    - name: Start Application on Server
       run: |
-        ssh -o StrictHostKeyChecking=no \
-          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-        
-        cd ${{ secrets.DEPLOY_PATH }}
-        
-        export NVM_DIR="$HOME/.nvm"
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-        
-        npm install --production --omit=dev
-        
-        pm2 delete consult-afrique 2>/dev/null || true
-        pm2 start dist/index.cjs --name "consult-afrique" --instances max
-        pm2 save
-        
-        pm2 status
-        
-        echo "✅ Deployment completed!"
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          cd ${{ secrets.DEPLOY_PATH }}
+          npm install --production
+          pm2 delete consult-afrique || true
+          pm2 start dist/index.cjs --name "consult-afrique"
+          pm2 save
         EOF
